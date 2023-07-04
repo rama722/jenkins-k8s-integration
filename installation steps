@@ -1,0 +1,122 @@
+devops using jenkins docker and kubernetes
+
+- jenkins integration with kubernetes:
+1. create jenkins as docker container
+2.how to make use of same docker machine asjenkins slave to run
+3.docker pipeline plugin
+4.install kubernetes continuous plugin
+5.configure k8s plugin using kube config file
+6.write jenkins pipeline
+7.build docker images
+8.push image to docker registry
+9.pull the image from docker registry and deploy to kubernetes
+
+         commit      ci/checkout           dockerbuild          docker push        deploy the application
+developes---->github -------------->jenkins-------->docker slave --------docker hub ------------kubernetes
+
+
+setup:
+ 1  ls
+    2  ll
+    3  git --version
+    4  sudo apt install git
+    5  sudo apt update
+    6  sudo apt install openjdk-17-jre
+    7  java -version
+    8  curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key | sudo tee   /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+    9  echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]   https://pkg.jenkins.io/debian binary/ | sudo tee   /etc/apt/sources.list.d/jenkins.list > /dev/null
+   10  sudo apt-get update
+   11  sudo apt-get install jenkins
+   12  sudo systemctl enable jenkins
+   13  sudo systemctl start jenkins
+   14  sudo systemctl status jenkins
+   15  sudo wget -O /etc/yum.repos.d/jenkins.repo     https://pkg.jenkins.io/redhat/jenkins.repo
+   16  sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io-2023.key
+   17  sudo wget -O /etc/yum.repos.d/jenkins.repo     https://pkg.jenkins.io/redhat/jenkins.repo
+   18  sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io-2023.key
+   19  curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee   /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+   20  echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]   https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+   21  echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]   https://pkg.jenkins.io/debian-stable binary/ | sudo tee   /etc/apt/sources.list.d/jenkins.list > /dev/null
+   22  sudo apt-get update
+   23  sudo apt-get install jenkins
+   24  sudo systemctl status jenkins
+   25  sudo /var/lib/jenkins/secrets/initialAdminPassword
+   26  sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+   27  sudo systemctl status docker
+   28  sudo apt update
+   29  sudo apt install docker.io -y
+   30  sudo systemctl enable docker
+   31  sudo systemctl status docker
+
+
+ Install Kubernetes: install master and worker 
+   
+sudo apt install apt-transport-https curl
+
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" >> ~/kubernetes.list
+sudo mv ~/kubernetes.list /etc/apt/sources.list.d
+
+sudo apt update
+
+sudo apt install kubelet
+
+sudo apt install kubeadm
+
+sudo apt install kubectl
+
+sudo apt-get install -y kubernetes-cni
+
+sudo apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+
+sudo swapoff -a
+
+sudo nano /etc/fstab
+
+sudo hostnamectl set-hostname kubernetes-master
+
+sudo hostnamectl set-hostname kubernetes-worker
+
+lsmod | grep br_netfilter
+sudo modprobe br_netfilter
+sudo sysctl net.bridge.bridge-nf-call-iptables=1
+[preflight] Running pre-flight checks
+    [WARNING IsDockerSystemdCheck]: detected "cgroupfs" as the Docker cgroup driver. The recommended driver is "systemd". Please follow the guide at https://kubernetes.io/docs/setup/cri/
+	
+	sudo mkdir /etc/docker
+cat <<EOF | sudo tee /etc/docker/daemon.json
+{ "exec-opts": ["native.cgroupdriver=systemd"],
+"log-driver": "json-file",
+"log-opts":
+{ "max-size": "100m" },
+"storage-driver": "overlay2"
+}
+EOF
+
+
+sudo systemctl enable docker
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+Kubernetes Master Node:
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+sudo ufw allow 6443
+sudo ufw allow 6443/tcp
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/k8s-manifests/kube-flannel-rbac.yml
+kubectl get pods --all-namespaces
+kubectl get componentstatus
+sudo nano /etc/kubernetes/manifests/kube-scheduler.yaml
+sudo nano /etc/kubernetes/manifests/kube-controller-manager.yaml
+sudo systemctl restart kubelet.service
+sudo kubeadm join 127.0.0.188:6443 --token u81y02.91gqwkxx6rnhnnly --discovery-token-ca-cert-hash sha256:4482ab1c66bf17992ea02c1ba580f4af9f3ad4cc37b24f189db34d6e3fe95c2d
+kubectl get nodes
+
+Deploying an Application to the Kubernetes Cluster:
+kubectl create deployment nginx --image=nginx
+kubectl describe deployment nginx
+
